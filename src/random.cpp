@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 #include "random.hpp"
 

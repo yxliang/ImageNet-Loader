@@ -98,25 +98,3 @@ Batch DataLoaderNp::_get_batch() {
 }
 
 
-//
-// int main () {
-//     string imroot("/data/zzy/imagenet/train/");
-//     string annfile("../grpc/train.txt");
-//     BaseDataLoader dl(imroot, annfile, 128, {224, 224}, true, 4);
-//     for (int i{0}; i < 10; ++i) {
-//         cout << dl.dataset.img_paths[i] << endl;
-//     }
-//     for (int i{0}; i < 10; ++i) {
-//         cout << dl.indices[i] << endl;
-//     }
-//
-//     vector<float> *batch;
-//     vector<int> size;
-//     cout << "run get batch: " << endl;
-//     dl._get_batch(batch, size);
-//     cout << "batch size: ";
-//     for (auto& el : size) cout << el << ", "; cout << endl;
-//     cout << batch->size() << endl;
-//
-//     return 0;
-// }

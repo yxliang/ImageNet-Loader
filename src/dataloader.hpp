@@ -8,6 +8,7 @@
 #include <thread>
 #include <future>
 #include <atomic>
+#include <numeric>
 #include <condition_variable>
 #include <mutex>
 
