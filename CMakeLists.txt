@@ -1,6 +1,6 @@
 
-cmake_minimum_required (VERSION 2.8)
-project (randaug_cpp)
+cmake_minimum_required (VERSION 3.8)
+project (ImageNet-Loader)
 
 # ---[ CMake build directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib)
@@ -14,7 +14,7 @@ set(CMAKE_DEBUG_POSTFIX "d")
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
-set(CMAKE_CXX_FLAGS "-std=c++17") # -Wextra
+# set(CMAKE_CXX_FLAGS "-std=c++17") # -Wextra
 # set(CMAKE_CXX_FLAGS_DEBUG "-g")
 # set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
@@ -55,9 +55,26 @@ list(APPEND LIGHTSTEP_LINK_LIBRARY glog gflags)
 
 aux_source_directory (./src SRC_SO)
 message(${SRC_SO})
-add_executable (main "${SRC_SO}")
-set_target_properties(main PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-target_link_libraries(main ${LIGHTSTEP_LINK_LIBRARY})
+set(appname ImageNet-Loader)
+add_executable (${appname} "${SRC_SO}")
+set_target_properties(${appname} PROPERTIES 
+	CXX_STANDARD 17
+	CXX_EXTENSIONS OFF
+	DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX}
+	)
+target_link_libraries(${appname} ${LIGHTSTEP_LINK_LIBRARY})
+
+
+aux_source_directory (./mysrc SRC_Files)
+message(${SRC_Files})
+set(appname MyImageLoader)
+add_executable (${appname} "${SRC_Files}")
+set_target_properties(${appname} PROPERTIES 
+	CXX_STANDARD 17
+	CXX_EXTENSIONS OFF
+	DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX}
+	)
+target_link_libraries(${appname} ${LIGHTSTEP_LINK_LIBRARY})
 
 # pybind11_add_module(dataloader SHARED wrapper.cpp)
 # target_link_libraries(dataloader ${LIGHTSTEP_LINK_LIBRARY})

@@ -128,16 +128,27 @@ Mat DataSet::TransVal(Mat& im) {
 void DataSet::get_one_by_idx(int idx, float* data, int64_t& label) {
     CHECK(data != nullptr) << "memory not allocated, implement error\n";
     string impth = img_paths[idx];
+    //cout << impth << endl;
     Mat im = cv::imread(impth, cv::ImreadModes::IMREAD_COLOR);
     CHECK(!im.empty()) << "image " << impth << "does not exists\n";
-    if (is_train) {
-        im = TransTrain(im);
-    } else {
-        im = TransVal(im);
-    }
+    //if (is_train) {
+    //    im = TransTrain(im);
+    //} else {
+    //    im = TransVal(im);
+    //}
     Normalize(im, {0.485f, 0.456f, 0.406f}, {0.229f, 0.224f, 0.225f}, data, is_train, 0, true);
     // Mat2Mem(im, data);
-    label = labels[idx];
+    //label = labels[idx];
+}
+
+void DataSet::GetItem(int idx, std::vector<cv::Mat>* ret) {
+    CHECK(ret != nullptr) << "memory not allocated, implement error\n";
+    ret->resize(1);
+    auto& out = (*ret)[0];
+    string impth = img_paths[idx];
+    cout << impth << endl;
+    Mat im = cv::imread(impth, cv::ImreadModes::IMREAD_COLOR);
+    im.copyTo(out);
 }
 
 
@@ -181,22 +192,27 @@ void DataSet::parse_annos(string imroot, string annfile) {
     ss.clear();ss.seekg(0);
 
     img_paths.resize(n_samples);
-    labels.resize(n_samples);
-    int tmp = 0;
-    // if (imroot[imroot.size()-1] == '/') {tmp = 1;}
-    if (imroot.back() == '/') {tmp = 1;}
-    for (int i{0}; i < n_samples; ++i) {
-        ss >> buf >> labels[i];
-        int num_split = tmp;
-        if (buf[0] == '/') ++num_split;
-        if (num_split == 0) {
-            img_paths[i] = imroot + "/" + buf;
-        } else if (num_split == 1) {
-            img_paths[i] = imroot + buf;
-        } else {
-            img_paths[i] = imroot + buf.substr(1);
-        }
+    for (int i{ 0 }; i < n_samples; ++i) {
+        ss >> buf;
+        img_paths[i] = buf;
     }
+
+    //labels.resize(n_samples);
+    //int tmp = 0;
+    //// if (imroot[imroot.size()-1] == '/') {tmp = 1;}
+    //if (imroot.back() == '/') {tmp = 1;}
+    //for (int i{0}; i < n_samples; ++i) {
+    //    ss >> buf >> labels[i];
+    //    int num_split = tmp;
+    //    if (buf[0] == '/') ++num_split;
+    //    if (num_split == 0) {
+    //        img_paths[i] = imroot + "/" + buf;
+    //    } else if (num_split == 1) {
+    //        img_paths[i] = imroot + buf;
+    //    } else {
+    //        img_paths[i] = imroot + buf.substr(1);
+    //    }
+    //}
 }
 
 int DataSet::get_n_samples() {
@@ -221,7 +237,7 @@ void DataSet::_set_rand_aug(int ra_n, int ra_m) {
 
 void DataSet::set_default_states() {
     inplace = true;
-    is_train = true;
+    is_train = false;
     nchw = true;
     use_ra = false;
 }

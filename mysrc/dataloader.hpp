@@ -12,9 +12,11 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "pipeline.hpp"
-#include "blocking_queue.hpp"
+//#include "pipeline.hpp"
 #include "thread_pool.hpp"
+#include "blocking_queue.hpp"
+
+#include <opencv2/opencv.hpp>
 
 
 using std::vector;
@@ -22,7 +24,7 @@ using std::mutex;
 using std::string;
 using std::condition_variable;
 using std::array;
-
+//using namespace cv;
 
 class Batch {
     public: 
@@ -50,6 +52,34 @@ public:
     WSI_Batch(WSI_Batch&& spl) = default;
     WSI_Batch& operator=(const WSI_Batch& spl) = default;
     WSI_Batch& operator=(WSI_Batch&& spl) = default;
+};
+
+class DataSet {
+public:
+    vector<string> img_paths;
+    vector<int64_t> labels;
+    int n_samples;
+    array<int, 2> size;
+    bool inplace{ true };
+    bool nchw{ true };
+
+    DataSet(string rootpth, string fname, array<int, 2> size = { 224, 224 }, bool nchw = true, bool inplace = true);
+    DataSet() { set_default_states(); }
+
+    // void init(string rootpth, string fname, array<int, 2> size={224, 224}, bool nchw=true, int ra_n=2, int ra_m=9, bool inplace=true);
+    void parse_annos(string imroot, string annfile);
+    cv::Mat TransTrain(cv::Mat& im);
+    cv::Mat TransVal(cv::Mat& im);
+    void get_one_by_idx(int idx, float* data, int64_t& lb);
+    void Mat2Mem(cv::Mat& im, float* res);
+    int get_n_samples();
+    void set_default_states();
+
+    void GetItem(int idx, std::vector<cv::Mat>* ret);
+
+    void _train();
+    void _eval();
+    void _set_rand_aug(int ra_n = 2, int ra_m = 9);
 };
 
 

@@ -13,8 +13,8 @@
 #include <glog/logging.h>
 #include <opencv2/opencv.hpp>
 
-#include "pipeline.hpp"
-#include "random.hpp"
+//#include "pipeline.hpp"
+//#include "random.hpp"
 #include "dataloader.hpp"
 #include "blocking_queue.hpp"
 
@@ -160,3 +160,126 @@ Batch DataLoaderNp::_get_batch() {
 //}
 
 
+void Normalize(Mat& im, array<float, 3> mean, array<float, 3> std, float* p_res, double pca_std, bool nchw) {
+    /* merge 1/255, pca-noise, mean/var and layout change operations together, so see if this can be faster */
+
+    // for pca noise
+    vector<float> rgb(3, 0);
+
+    // for mean/var
+    for (int i{ 0 }; i < 3; ++i) {
+        std[i] = 1.f / std[i];
+    }
+
+    float scale = static_cast<float>(1. / 255.);
+    im.forEach<cv::Vec3b>([&](cv::Vec3b& pix, const int* pos) {
+        for (int i{ 0 }; i < 3; ++i) {
+            float tmp = static_cast<float>(pix[i]) * scale;
+            tmp += rgb[2 - i];
+            tmp = (tmp - mean[i]) * std[i];
+            int offset;
+            if (nchw) {
+                offset = i * im.rows * im.cols + pos[0] * im.cols + pos[1];
+            }
+            else {
+                offset = pos[0] * im.cols * 3 + pos[1] * 3 + i;
+            }
+            p_res[offset] = tmp;
+        }
+        });
+}
+
+// member function of TransformTrain
+DataSet::DataSet(string rootpth, string fname, array<int, 2> size, bool nchw, bool inplace) : size(size), inplace(inplace), nchw(nchw) {
+    set_default_states();
+    parse_annos(rootpth, fname);
+}
+
+int DataSet::get_n_samples() {
+    return n_samples;
+}
+
+void DataSet::get_one_by_idx(int idx, float* data, int64_t& label) {
+    CHECK(data != nullptr) << "memory not allocated, implement error\n";
+    string impth = img_paths[idx];
+    //cout << impth << endl;
+    Mat im = cv::imread(impth, cv::ImreadModes::IMREAD_COLOR);
+    CHECK(!im.empty()) << "image " << impth << "does not exists\n";
+    //if (is_train) {
+    //    im = TransTrain(im);
+    //} else {
+    //    im = TransVal(im);
+    //}
+    Normalize(im, { 0.485f, 0.456f, 0.406f }, { 0.229f, 0.224f, 0.225f }, data, 0, true);
+     //Mat2Mem(im, data);
+    //label = labels[idx];
+}
+
+void DataSet::Mat2Mem(Mat& im, float* res) {
+    CHECK(res != nullptr) << "res should not be nullptr\n";
+    int row_size = im.cols * 3;
+    int chunk_size = row_size * sizeof(float);
+    if (nchw) {
+        int plane_size = im.rows * im.cols;
+        for (int h{ 0 }; h < im.rows; ++h) {
+            float* ptr = im.ptr<float>(h);
+            int offset_w = 0;
+            for (int w{ 0 }; w < im.cols; ++w) {
+                for (int c{ 0 }; c < 3; ++c) {
+                    int offset = c * plane_size + h * im.cols + w;
+                    res[offset] = ptr[offset_w];
+                    ++offset_w;
+                }
+            }
+        }
+    }
+    else {
+        for (int h{ 0 }; h < im.rows; ++h) {
+            float* ptr = im.ptr<float>(h);
+            int offset_res = row_size * h;
+            memcpy((void*)(res + offset_res), (void*)ptr, chunk_size);
+        }
+    }
+}
+
+void DataSet::set_default_states() {
+    inplace = true;
+    nchw = true;
+}
+
+void DataSet::parse_annos(string imroot, string annfile) {
+    ifstream fin(annfile, ios::in);
+    CHECK(fin) << "file does not exists: " << annfile << endl;
+    stringstream ss;
+    fin >> ss.rdbuf(); // std::noskipws
+    CHECK(!(fin.fail() && fin.eof())) << "error when read ann file\n";
+    fin.close();
+
+    n_samples = 0;
+    string buf;
+    while (std::getline(ss, buf)) { ++n_samples; };
+    ss.clear(); ss.seekg(0);
+
+    img_paths.resize(n_samples);
+    for (int i{ 0 }; i < n_samples; ++i) {
+        ss >> buf;
+        img_paths[i] = buf;
+    }
+
+    //labels.resize(n_samples);
+    //int tmp = 0;
+    //// if (imroot[imroot.size()-1] == '/') {tmp = 1;}
+    //if (imroot.back() == '/') {tmp = 1;}
+    //for (int i{0}; i < n_samples; ++i) {
+    //    ss >> buf >> labels[i];
+    //    int num_split = tmp;
+    //    if (buf[0] == '/') ++num_split;
+    //    if (num_split == 0) {
+    //        img_paths[i] = imroot + "/" + buf;
+    //    } else if (num_split == 1) {
+    //        img_paths[i] = imroot + buf;
+    //    } else {
+    //        img_paths[i] = imroot + buf.substr(1);
+    //    }
+    //}
+}

@@ -27,7 +27,7 @@ class DataSet {
         int n_samples;
         array<int, 2> size;
         bool inplace{true};
-        bool is_train{true};
+        bool is_train{false};
         bool nchw{true};
         RandAug ra;
         bool use_ra{false};
@@ -43,6 +43,8 @@ class DataSet {
         void Mat2Mem (Mat &im, float* res);
         int get_n_samples();
         void set_default_states();
+
+        void GetItem(int idx, std::vector<cv::Mat>* ret);
 
         void _train();
         void _eval();
