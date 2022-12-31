@@ -12,11 +12,9 @@
 #include <condition_variable>
 #include <mutex>
 
-//#include "pipeline.hpp"
-#include "thread_pool.hpp"
+#include "dataset.hpp"
 #include "blocking_queue.hpp"
-
-#include <opencv2/opencv.hpp>
+#include "thread_pool.hpp"
 
 
 using std::vector;
@@ -24,62 +22,21 @@ using std::mutex;
 using std::string;
 using std::condition_variable;
 using std::array;
-//using namespace cv;
+
 
 class Batch {
-    public: 
-        vector<float> *data{nullptr};
-        vector<int> dsize;
-        vector<int64_t> *labels{nullptr};
-        vector<int> lsize;
-
-        Batch()=default;
-        Batch(vector<float> *dt, vector<int> dsz, vector<int64_t> *lbs, vector<int> lsz);
-        Batch(const Batch& spl)=default;
-        Batch(Batch&& spl)=default;
-        Batch& operator=(const Batch& spl)=default;
-        Batch& operator=(Batch&& spl)=default;
-};
-
-class WSI_Batch {
 public:
     vector<float>* data{ nullptr };
     vector<int> dsize;
+    vector<int>* locations{ nullptr };  //x,y
+    vector<int> lsize;
 
-    WSI_Batch() = default;
-    WSI_Batch(vector<cv::Mat>* dt, vector<int> dsz);
-    WSI_Batch(const WSI_Batch& spl) = default;
-    WSI_Batch(WSI_Batch&& spl) = default;
-    WSI_Batch& operator=(const WSI_Batch& spl) = default;
-    WSI_Batch& operator=(WSI_Batch&& spl) = default;
-};
-
-class DataSet {
-public:
-    vector<string> img_paths;
-    vector<int64_t> labels;
-    int n_samples;
-    array<int, 2> size;
-    bool inplace{ true };
-    bool nchw{ true };
-
-    DataSet(string rootpth, string fname, array<int, 2> size = { 224, 224 }, bool nchw = true, bool inplace = true);
-    DataSet() { set_default_states(); }
-
-    // void init(string rootpth, string fname, array<int, 2> size={224, 224}, bool nchw=true, int ra_n=2, int ra_m=9, bool inplace=true);
-    void parse_annos(string imroot, string annfile);
-    cv::Mat TransTrain(cv::Mat& im);
-    cv::Mat TransVal(cv::Mat& im);
-    void get_one_by_idx(int idx, float* data, int64_t& lb);
-    void Mat2Mem(cv::Mat& im, float* res);
-    int get_n_samples();
-    void set_default_states();
-
-    void GetItem(int idx, std::vector<cv::Mat>* ret);
-
-    void _train();
-    void _eval();
-    void _set_rand_aug(int ra_n = 2, int ra_m = 9);
+    Batch() = default;
+    Batch(vector<float>* dt, vector<int> dsz, vector<int>* lcs, vector<int> lsz);
+    Batch(const Batch& spl) = default;
+    Batch(Batch&& spl) = default;
+    Batch& operator=(const Batch& spl) = default;
+    Batch& operator=(Batch&& spl) = default;
 };
 
 
@@ -115,6 +72,9 @@ class BaseDataLoader {
         DataSet dataset;
 
         BaseDataLoader() {}
+        BaseDataLoader(std::vector<string> files, int bs,
+            vector<int> sz, bool nchw, bool shuffle, int n_workers,
+            bool drop_last);
         BaseDataLoader(string rootpth, string fname, int bs,
             vector<int> sz, bool nchw, bool shuffle, int n_workers,
             bool drop_last);
@@ -138,6 +98,27 @@ class BaseDataLoader {
         int64_t _get_num_batches();
         T _next_batch();
 };
+
+template<typename T>
+BaseDataLoader<T>::BaseDataLoader(std::vector<std::string> files, int bs,
+    vector<int> sz, bool nchw, bool shuffle, int n_workers,
+    bool drop_last) : batchsize(bs), nchw(nchw), shuffle(shuffle),
+    num_workers(n_workers), drop_last(drop_last) {
+   
+    height = sz[0];
+    width = sz[1];
+    pos = 0;
+    epoch = 0;
+
+    dataset = DataSet(files, { height, width }, nchw);
+    n_all_samples = dataset.get_n_samples();
+    n_samples = n_all_samples;
+    all_indices.resize(n_samples);
+    std::iota(all_indices.begin(), all_indices.end(), 0);
+    indices = all_indices;
+
+    thread_pool.init(128, num_workers);
+}
 
 template<typename T>
 BaseDataLoader<T>::BaseDataLoader(string rootpth, string fname, int bs,
@@ -296,23 +277,13 @@ T BaseDataLoader<T>::_next_batch() {
 /* 
  * definition of DataLoaderNp
  *  */
-class DataLoaderNp: public BaseDataLoader<Batch> {
+class DataLoaderWSI : public BaseDataLoader<Batch> {
 public:
-    DataLoaderNp(string rootpth, string fname, int bs,
-        vector<int> sz, bool nchw, bool shuffle, int n_workers, 
-        bool drop_last): BaseDataLoader<Batch>(rootpth, fname, bs,
-        sz, nchw, shuffle, n_workers, drop_last) {}
+    DataLoaderWSI(std::vector<std::string> files, int bs,
+        vector<int> sz, bool nchw, bool shuffle, int n_workers,
+        bool drop_last) : BaseDataLoader<Batch>(files, bs,
+            sz, nchw, shuffle, n_workers, drop_last) {}
     Batch _get_batch();
 };
-
-
-//class DataLoaderWSI : public BaseDataLoader<WSI_Batch> {
-//public:
-//    DataLoaderWSI(string rootpth, string fname, int bs,
-//        vector<int> sz, bool nchw, bool shuffle, int n_workers,
-//        bool drop_last) : BaseDataLoader<Batch>(rootpth, fname, bs,
-//            sz, nchw, shuffle, n_workers, drop_last) {}
-//    WSI_Batch _get_batch();
-//};
 
 #endif

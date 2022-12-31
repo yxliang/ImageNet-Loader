@@ -39,20 +39,6 @@ class Batch {
         Batch& operator=(Batch&& spl)=default;
 };
 
-class WSI_Batch {
-public:
-    vector<float>* data{ nullptr };
-    vector<int> dsize;
-
-    WSI_Batch() = default;
-    WSI_Batch(vector<cv::Mat>* dt, vector<int> dsz);
-    WSI_Batch(const WSI_Batch& spl) = default;
-    WSI_Batch(WSI_Batch&& spl) = default;
-    WSI_Batch& operator=(const WSI_Batch& spl) = default;
-    WSI_Batch& operator=(WSI_Batch&& spl) = default;
-};
-
-
 template<typename T>
 class BaseDataLoader {
     public:
