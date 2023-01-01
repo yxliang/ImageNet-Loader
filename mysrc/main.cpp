@@ -1,13 +1,15 @@
 #include "dataloader.hpp"
 #include <iostream>
 #include <vector>
-using std::endl;
-using std::cout;
-using std::vector;
+//using std::endl;
+//using std::cout;
+//using std::vector;
+using namespace cv;
+using namespace std;  //error
 
 const std::string KEYS =
 "{im_dir                    |D:\\Pinxin\\Dev\\export_tct_ngc_12.20\\TCTAnnotated(non-gynecologic)/TCT_NGC-BJXK-20210910/BJXFK-XA-575822/  | images fold         }"
-"{batch_size                |10                                                                                |batch_size      }"
+"{batch_size                |16                                                                               |batch_size      }"
 "{num_worker                |2                                                                                  |num_worker    }"
 "{height                    |1280                                                                                |height      }"
 "{width                     |1280                                                                                |width      }"
@@ -32,14 +34,14 @@ int main(int argc, char* argv[]) {
 	}
 	
 	DataLoaderWSI dl(image_files, batch_size, { height, width }, nchw, shuffle, num_worker, false);
-	for (int i{ 0 }; i < 10; ++i) {
-		cout << dl.dataset.img_paths[i] << endl;
-	}
-	for (int i{ 0 }; i < 10; ++i) {
-		cout << dl.indices[i] << endl;
-	}
+	//for (int i{ 0 }; i < 10; ++i) {
+	//	std::cout << dl.dataset.img_paths[i] << std::endl;
+	//}
+	//for (int i{ 0 }; i < 10; ++i) {
+	//	std::cout << dl.indices[i] << std::endl;
+	//}
 
-	cout << "run get batch: " << endl;
+	std::cout << "run get batch: " << std::endl;
 	int64 t;
 	dl.start_prefetcher();
 	t = cv::getTickCount();
@@ -49,7 +51,7 @@ int main(int argc, char* argv[]) {
 		++i;
 		t = cv::getTickCount();
 		batch = dl._next_batch();
-		cout << i << "th batch. " << (cv::getTickCount() - t) * 1000 / cv::getTickFrequency() << "ms." << " batch size: " << batch.dsize[0] << endl;
+		std::cout << i << "th batch. " << (cv::getTickCount() - t) * 1000 / cv::getTickFrequency() << "ms." << " batch size: " << batch.dsize[0] << std::endl;
 
 		if (batch.data) delete batch.data;
 		if (batch.locations) delete batch.locations;
